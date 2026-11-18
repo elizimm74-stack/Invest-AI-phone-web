@@ -1,0 +1,1351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>InvestAI — Simulated Auto-Investing App</title>
+  <style>
+    :root {
+      --bg-outer: #0d0f12;
+      --bg-phone: #15181e;
+      --bg-card: #1f242d;
+      --bg-card-hover: #262c37;
+      --border-subtle: #2c3340;
+      --gold: #f5b942;
+      --gold-dim: rgba(245, 185, 66, 0.16);
+      --gold-text: #14161a;
+      --green: #38d399;
+      --green-dim: rgba(56, 211, 153, 0.14);
+      --red: #f87171;
+      --red-dim: rgba(248, 113, 113, 0.14);
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --text-dim: #6b7280;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-outer);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px 12px;
+    }
+
+    .sim-banner {
+      max-width: 420px;
+      width: 100%;
+      background: #1a1e26;
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 10px 14px;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 12px;
+    }
+
+    .sim-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 600;
+      color: var(--gold);
+    }
+
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 8px var(--green);
+      animation: pulse 1.6s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.45; transform: scale(0.85); }
+    }
+
+    .sim-controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .sim-btn {
+      background: var(--bg-card);
+      color: var(--text-main);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 5px 9px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+
+    .sim-btn:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--gold);
+    }
+
+    .sim-btn.gold {
+      background: var(--gold);
+      color: var(--gold-text);
+      border-color: var(--gold);
+    }
+
+    /* Phone Frame matching the 6-screen dark gold aesthetic */
+    .phone-frame {
+      width: 100%;
+      max-width: 400px;
+      height: 760px;
+      background: var(--bg-phone);
+      border: 2px solid #2b313d;
+      border-radius: 34px;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Top Header */
+    .app-header {
+      padding: 18px 20px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 700;
+      font-size: 16px;
+      letter-spacing: -0.2px;
+    }
+
+    .brand-icon {
+      width: 22px;
+      height: 22px;
+      color: var(--gold);
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .live-pill {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: var(--green-dim);
+      color: var(--green);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .live-pill.paused {
+      background: var(--red-dim);
+      color: var(--red);
+    }
+
+    .menu-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 18px;
+      cursor: pointer;
+    }
+
+    /* Main Scrollable Content */
+    .screen-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 20px 20px;
+    }
+
+    .screen-container::-webkit-scrollbar {
+      width: 4px;
+    }
+    .screen-container::-webkit-scrollbar-thumb {
+      background: #2f3644;
+      border-radius: 4px;
+    }
+
+    .screen {
+      display: none;
+      animation: fadeIn 0.18s ease-out;
+    }
+
+    .screen.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    h1.screen-title {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    p.screen-sub {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.4;
+      margin-bottom: 16px;
+    }
+
+    /* Cards & Rows */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 14px;
+      padding: 14px 16px;
+      margin-bottom: 12px;
+    }
+
+    .card-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .row-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .icon-box {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: var(--gold-dim);
+      color: var(--gold);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 17px;
+      flex-shrink: 0;
+    }
+
+    .icon-box.green {
+      background: var(--green-dim);
+      color: var(--green);
+    }
+
+    .label-xs {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 2px;
+    }
+
+    .val-md {
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .chevron {
+      color: var(--text-dim);
+      font-size: 16px;
+    }
+
+    /* Primary Gold Button */
+    .btn-primary {
+      width: 100%;
+      background: var(--gold);
+      color: var(--gold-text);
+      border: none;
+      border-radius: 12px;
+      padding: 13px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 6px;
+      transition: filter 0.15s;
+    }
+
+    .btn-primary:hover {
+      filter: brightness(1.06);
+    }
+
+    /* Big Balance Display */
+    .hero-balance {
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: -0.6px;
+      margin: 4px 0;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .delta-text {
+      font-size: 13px;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .up { color: var(--green); }
+    .down { color: var(--red); }
+
+    /* SVG Charts */
+    .chart-box {
+      width: 100%;
+      height: 115px;
+      margin: 12px 0 8px;
+      background: linear-gradient(180deg, rgba(245,185,66,0.08) 0%, rgba(21,24,30,0) 100%);
+      border-radius: 12px;
+      border: 1px solid rgba(245, 185, 66, 0.18);
+      padding: 8px;
+      position: relative;
+    }
+
+    .chart-box svg {
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+    }
+
+    /* 3-Column Metrics */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .metric-tile {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 10px;
+      text-align: center;
+    }
+
+    .metric-tile .val {
+      font-size: 14px;
+      font-weight: 700;
+      margin-top: 3px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Tabs in Research */
+    .pill-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .pill-tab {
+      background: var(--bg-card);
+      color: var(--text-muted);
+      border: 1px solid var(--border-subtle);
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .pill-tab.active {
+      background: var(--gold);
+      color: var(--gold-text);
+      border-color: var(--gold);
+    }
+
+    /* Toggle Switch */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 24px;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background-color: #374151;
+      transition: 0.2s;
+      border-radius: 24px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: 0.2s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider {
+      background-color: var(--green);
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(20px);
+    }
+
+    /* Live AI Trade Feed */
+    .trade-feed {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 210px;
+      overflow-y: auto;
+    }
+
+    .trade-item {
+      background: #181c23;
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      padding: 9px 11px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      animation: slideIn 0.25s ease-out;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(-6px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    .tag-buy, .tag-sell {
+      font-size: 10px;
+      font-weight: 800;
+      padding: 2px 6px;
+      border-radius: 5px;
+      margin-right: 6px;
+      letter-spacing: 0.4px;
+    }
+
+    .tag-buy {
+      background: var(--green-dim);
+      color: var(--green);
+    }
+
+    .tag-sell {
+      background: var(--red-dim);
+      color: var(--red);
+    }
+
+    /* Timeframe Buttons */
+    .tf-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin: 12px 0;
+    }
+
+    .tf-btn {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+      border-radius: 8px;
+      padding: 7px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .tf-btn.active {
+      background: var(--gold);
+      color: var(--gold-text);
+      border-color: var(--gold);
+    }
+
+    /* Select inputs for profile */
+    select.profile-select {
+      background: #15181e;
+      color: var(--text-main);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 6px 8px;
+      font-size: 13px;
+      font-weight: 600;
+      outline: none;
+    }
+
+    /* Bottom Navigation Bar (5 icons matching screenshots) */
+    .bottom-nav {
+      background: #12151a;
+      border-top: 1px solid var(--border-subtle);
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      padding: 8px 4px 12px;
+    }
+
+    .nav-item {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      font-size: 10px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: color 0.15s;
+    }
+
+    .nav-item.active {
+      color: var(--gold);
+    }
+
+    .nav-item svg {
+      width: 19px;
+      height: 19px;
+    }
+
+    .disclaimer-note {
+      font-size: 11px;
+      color: var(--text-dim);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 10px;
+      line-height: 1.35;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Simulation Control Bar -->
+  <div class="sim-banner">
+    <div class="sim-badge">
+      <span class="pulse-dot" id="simDot"></span>
+      <span>PAPER TRADING SIMULATOR</span>
+    </div>
+    <div class="sim-controls">
+      <button class="sim-btn" id="speedBtn" title="Change simulation speed">Speed: 1m/3s</button>
+      <button class="sim-btn gold" id="addFundsBtn">+$1,000 Sim</button>
+    </div>
+  </div>
+
+  <!-- Mobile App Frame -->
+  <div class="phone-frame">
+    <!-- App Header -->
+    <div class="app-header">
+      <div class="brand">
+        <svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline>
+          <polyline points="16 7 22 7 22 13"></polyline>
+        </svg>
+        <span>InvestAI</span>
+      </div>
+      <div class="header-right">
+        <span class="live-pill" id="aiStatusPill">● AI Auto-Trading</span>
+        <button class="menu-btn" id="jumpProjectionBtn" title="Wealth Projection">📊</button>
+      </div>
+    </div>
+
+    <!-- Screens Container -->
+    <div class="screen-container">
+
+      <!-- SCREEN 01: PROFILE -->
+      <section class="screen active" id="screen-profile">
+        <h1 class="screen-title">My Profile</h1>
+        <p class="screen-sub">Your investing profile helps InvestAI personalize automated trades, risk sizing, and strategy.</p>
+
+        <div class="card">
+          <div class="card-row">
+            <div class="row-left">
+              <div class="icon-box">🎯</div>
+              <div>
+                <div class="label-xs">Goal</div>
+                <select class="profile-select" id="goalSelect">
+                  <option value="Long-term growth" selected>Long-term growth</option>
+                  <option value="Active momentum">Active momentum</option>
+                  <option value="Capital preservation">Capital preservation</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-row">
+            <div class="row-left">
+              <div class="icon-box">⚖️</div>
+              <div>
+                <div class="label-xs">Risk Tolerance (Affects AI Trade Size)</div>
+                <select class="profile-select" id="riskSelect">
+                  <option value="Conservative">Conservative</option>
+                  <option value="Moderate" selected>Moderate</option>
+                  <option value="Aggressive">Aggressive</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-row">
+            <div class="row-left">
+              <div class="icon-box">📅</div>
+              <div>
+                <div class="label-xs">Timeline</div>
+                <select class="profile-select" id="timelineSelect">
+                  <option value="5">5 years</option>
+                  <option value="10" selected>10 years</option>
+                  <option value="20">20 years</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-row">
+            <div class="row-left">
+              <div class="icon-box green">💵</div>
+              <div>
+                <div class="label-xs">Simulated Paper Balance</div>
+                <div class="val-md" id="profileSimBalance">$10,000.00</div>
+              </div>
+            </div>
+            <button class="sim-btn gold" onclick="addSimulatedCash(2500)">+$2,500</button>
+          </div>
+        </div>
+
+        <button class="btn-primary" id="saveProfileBtn">Update Profile &amp; Sync AI</button>
+      </section>
+
+      <!-- SCREEN 02: DASHBOARD -->
+      <section class="screen" id="screen-dashboard">
+        <h1 class="screen-title">Dashboard</h1>
+        <div class="label-xs">Portfolio balance (Live Simulated) ⓘ</div>
+        <div class="hero-balance" id="dashTotalBalance">$10,000.00</div>
+        <div class="delta-text up" id="dashTotalReturn">▲ +$0.00 (+0.00%)</div>
+
+        <!-- Live Gold Sparkline Chart -->
+        <div class="chart-box">
+          <svg id="liveChart" viewBox="0 0 320 95" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="goldGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#f5b942" stop-opacity="0.38" />
+                <stop offset="100%" stop-color="#f5b942" stop-opacity="0.0" />
+              </linearGradient>
+            </defs>
+            <path id="chartArea" fill="url(#goldGrad)" d=""></path>
+            <path id="chartLine" fill="none" stroke="#f5b942" stroke-width="2.5" stroke-linecap="round" d=""></path>
+          </svg>
+        </div>
+
+        <!-- 3 Metrics Row -->
+        <div class="metrics-grid">
+          <div class="metric-tile">
+            <div class="label-xs">Return</div>
+            <div class="val up" id="metricReturn">+0.00%</div>
+          </div>
+          <div class="metric-tile">
+            <div class="label-xs">Volatility</div>
+            <div class="val" id="metricVol">12.1%</div>
+          </div>
+          <div class="metric-tile">
+            <div class="label-xs">Cash</div>
+            <div class="val" id="metricCash">$1,200.00</div>
+          </div>
+        </div>
+
+        <!-- At a Glance Card -->
+        <div class="card">
+          <div class="row-left" style="margin-bottom: 6px;">
+            <span style="color: var(--gold); font-weight: 700;">📶 At a Glance</span>
+            <span class="label-xs" id="simClockDisplay" style="margin-left:auto;">Sim Time: 09:30 AM</span>
+          </div>
+          <p style="font-size: 12.5px; color: var(--text-muted); line-height: 1.45;" id="glanceSummary">
+            AI auto-trader is actively scanning NOVA, HARB, QNTX, and SOLR every simulated minute.
+          </p>
+        </div>
+
+        <!-- Mini Live Execution Strip -->
+        <div class="card" style="padding: 10px 14px;">
+          <div class="card-row">
+            <div>
+              <div class="label-xs">Latest AI Execution</div>
+              <div style="font-size: 12.5px; font-weight: 600;" id="latestTradeBanner">Waiting for next minute tick...</div>
+            </div>
+            <button class="sim-btn" onclick="switchScreen('strategy')">Live Log →</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- SCREEN 03: RESEARCH -->
+      <section class="screen" id="screen-research">
+        <h1 class="screen-title">Research</h1>
+        <div class="pill-tabs">
+          <button class="pill-tab active" onclick="filterResearch('all', this)">AI Picks</button>
+          <button class="pill-tab" onclick="filterResearch('gainers', this)">Top Movers</button>
+          <button class="pill-tab" onclick="filterResearch('signals', this)">Signals</button>
+        </div>
+
+        <div id="researchList"></div>
+
+        <button class="btn-primary" style="background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-subtle);" onclick="switchScreen('projection')">
+          📊 Open 10-Year Wealth Projection →
+        </button>
+      </section>
+
+      <!-- SCREEN 04: AI STRATEGY & LIVE AUTO-TRADING -->
+      <section class="screen" id="screen-strategy">
+        <h1 class="screen-title">AI Strategy</h1>
+        <p class="screen-sub">Automated minute-by-minute execution based on your profile and live market ticks.</p>
+
+        <!-- Auto Trading Toggle Card -->
+        <div class="card">
+          <div class="card-row">
+            <div class="row-left">
+              <div class="icon-box">✨</div>
+              <div>
+                <div class="val-md">Automatic AI Investing</div>
+                <div class="label-xs" id="autoTradeSub">Executing buys &amp; sells every sim minute</div>
+              </div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="autoTradeToggle" checked />
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Strategy Status -->
+        <div class="card">
+          <div class="row-left" style="margin-bottom: 6px;">
+            <span style="color: var(--green); font-weight: 700;">✔ Engine Active</span>
+            <span class="label-xs" style="margin-left:auto;" id="tradeCountBadge">0 trades executed</span>
+          </div>
+          <p style="font-size: 12.5px; color: var(--text-muted); line-height: 1.4;" id="strategyRationale">
+            A diversified, growth-oriented algorithm fits your profile (Moderate risk, 10-year timeline).
+          </p>
+        </div>
+
+        <!-- Minute-by-Minute Live Trade Log -->
+        <div style="display:flex; justify-content:space-between; align-items:center; margin: 12px 0 8px;">
+          <span style="font-size: 13px; font-weight: 700;">Live AI Order Feed (Minute Ticks)</span>
+          <button class="sim-btn" id="forceTickBtn">Run 1m Tick Now</button>
+        </div>
+
+        <div class="trade-feed" id="tradeFeed">
+          <!-- Populated dynamically -->
+        </div>
+      </section>
+
+      <!-- SCREEN 05: WEALTH PROJECTION -->
+      <section class="screen" id="screen-projection">
+        <h1 class="screen-title">Wealth Projection</h1>
+        <div class="label-xs">Illustrative scenario ⓘ</div>
+        <div class="hero-balance" id="projValue">$24,320</div>
+        <div class="label-xs" id="projYearsLabel" style="margin-bottom: 8px;">in 10 years</div>
+
+        <div class="chart-box">
+          <svg viewBox="0 0 320 95" preserveAspectRatio="none">
+            <path fill="url(#goldGrad)" d="M0,85 Q120,72 320,14 L320,95 L0,95 Z"></path>
+            <path fill="none" stroke="#f5b942" stroke-width="2.5" d="M0,85 Q120,72 320,14"></path>
+          </svg>
+        </div>
+
+        <div class="tf-row">
+          <button class="tf-btn" onclick="setProjectionYears(1, this)">1Y</button>
+          <button class="tf-btn" onclick="setProjectionYears(5, this)">5Y</button>
+          <button class="tf-btn active" onclick="setProjectionYears(10, this)">10Y</button>
+          <button class="tf-btn" onclick="setProjectionYears(20, this)">20Y</button>
+        </div>
+
+        <div class="card">
+          <div class="card-row" style="margin-bottom: 10px;">
+            <span class="label-xs">Starting Amount (Current Sim)</span>
+            <span class="val-md" id="projStartAmt">$10,000</span>
+          </div>
+          <div class="card-row" style="margin-bottom: 10px;">
+            <span class="label-xs">Monthly Contribution</span>
+            <span class="val-md">$500</span>
+          </div>
+          <div class="card-row">
+            <span class="label-xs">Illustrative Value</span>
+            <span class="val-md" style="color: var(--gold);" id="projEndAmt">$24,320</span>
+          </div>
+        </div>
+
+        <div class="disclaimer-note">
+          <span>ⓘ</span>
+          <span>This is an illustrative paper-trading projection only and not a promise of real-world returns.</span>
+        </div>
+      </section>
+
+      <!-- SCREEN 06: HOLDINGS -->
+      <section class="screen" id="screen-holdings">
+        <h1 class="screen-title">Holdings</h1>
+        <div class="label-xs">Portfolio overview ⓘ</div>
+        <div style="display:flex; align-items:baseline; gap:10px; margin: 4px 0 14px;">
+          <div class="hero-balance" style="font-size: 28px;" id="holdingsTotalVal">$10,000.00</div>
+          <div class="delta-text up" id="holdingsDelta">▲ +0.00%</div>
+        </div>
+
+        <div id="holdingsList">
+          <!-- Populated dynamically -->
+        </div>
+
+        <button class="btn-primary" onclick="addSimulatedCash(1000)">+ Deposit $1,000 Simulated Cash</button>
+      </section>
+
+    </div>
+
+    <!-- Bottom Navigation Bar -->
+    <nav class="bottom-nav">
+      <button class="nav-item active" data-target="profile">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+        </svg>
+        <span>Home</span>
+      </button>
+      <button class="nav-item" data-target="dashboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="20" x2="18" y2="10"></line>
+          <line x1="12" y1="20" x2="12" y2="4"></line>
+          <line x1="6" y1="20" x2="6" y2="14"></line>
+        </svg>
+        <span>Dashboard</span>
+      </button>
+      <button class="nav-item" data-target="research">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+          <line x1="7" y1="8" x2="17" y2="8"></line>
+          <line x1="7" y1="12" x2="17" y2="12"></line>
+          <line x1="7" y1="16" x2="13" y2="16"></line>
+        </svg>
+        <span>Research</span>
+      </button>
+      <button class="nav-item" data-target="strategy">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline>
+          <polyline points="16 7 22 7 22 13"></polyline>
+        </svg>
+        <span>Strategy</span>
+      </button>
+      <button class="nav-item" data-target="holdings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="2" y="7" width="20" height="14" rx="2"></rect>
+          <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"></path>
+        </svg>
+        <span>Holdings</span>
+      </button>
+    </nav>
+  </div>
+
+  <script>
+    // --- Simulated Market & Portfolio State ---
+    const stocks = [
+      {
+        ticker: "NOVA",
+        name: "Nova Semiconductors",
+        icon: "🔲",
+        price: 140.00,
+        prevPrice: 140.00,
+        shares: 40.0, // $5,600 initial
+        note: "AI chip demand fluctuates on intraday order flow."
+      },
+      {
+        ticker: "HARB",
+        name: "Harbor Renewables",
+        icon: "🍃",
+        price: 80.00,
+        prevPrice: 80.00,
+        shares: 40.0, // $3,200 initial
+        note: "Project pipeline expands with new utility contracts."
+      },
+      {
+        ticker: "QNTX",
+        name: "Quantix Cloud Systems",
+        icon: "⚡",
+        price: 62.50,
+        prevPrice: 62.50,
+        shares: 0,
+        note: "Enterprise AI compute utilization trending higher."
+      },
+      {
+        ticker: "SOLR",
+        name: "Solstice Grid Storage",
+        icon: "🔋",
+        price: 45.00,
+        prevPrice: 45.00,
+        shares: 0,
+        note: "Battery storage margins improving across regional hubs."
+      }
+    ];
+
+    let state = {
+      cash: 1200.00,
+      netDeposits: 10000.00,
+      autoTrading: true,
+      risk: "Moderate",
+      goal: "Long-term growth",
+      timelineYears: 10,
+      simMinutesElapsed: 0,
+      tickIntervalMs: 3000, // 1 simulated minute every 3 real seconds
+      tradesCount: 0,
+      history: [10000, 10012, 9995, 10028, 10045, 10030, 10064],
+      tradeLog: []
+    };
+
+    const tradeReasons = {
+      BUY: [
+        "Momentum breakout detected on 1m candle",
+        "RSI oversold dip — AI accumulating shares",
+        "Volume surge above 15-min moving average",
+        "Rebalancing underweight target allocation"
+      ],
+      SELL: [
+        "Taking +1.4% short-term profit into strength",
+        "Trimming overweight position to lock gains",
+        "Trailing stop triggered on intraday pullback",
+        "Rotating capital into higher-momentum signal"
+      ]
+    };
+
+    // --- Formatting Helpers ---
+    function fmtMoney(val) {
+      return "$" + val.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function fmtSimClock(mins) {
+      const totalMins = 9 * 60 + 30 + mins; // Starts 09:30 AM
+      const h24 = Math.floor(totalMins / 60) % 24;
+      const m = totalMins % 60;
+      const ampm = h24 >= 12 ? "PM" : "AM";
+      const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
+      return `${String(h12).padStart(2, "0")}:${String(m).padStart(2, "0")} ${ampm}`;
+    }
+
+    function getPortfolioValue() {
+      const equity = stocks.reduce((sum, s) => sum + s.shares * s.price, 0);
+      return equity + state.cash;
+    }
+
+    // --- Navigation ---
+    function switchScreen(screenName) {
+      document.querySelectorAll(".screen").forEach(el => el.classList.remove("active"));
+      const target = document.getElementById(`screen-${screenName}`);
+      if (target) target.classList.add("active");
+
+      document.querySelectorAll(".nav-item").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.target === screenName);
+      });
+    }
+
+    document.querySelectorAll(".nav-item").forEach(btn => {
+      btn.addEventListener("click", () => switchScreen(btn.dataset.target));
+    });
+
+    document.getElementById("jumpProjectionBtn").addEventListener("click", () => {
+      switchScreen("projection");
+    });
+
+    // --- Add Simulated Money ---
+    function addSimulatedCash(amount) {
+      state.cash += amount;
+      state.netDeposits += amount;
+      const newTotal = getPortfolioValue();
+      state.history.push(newTotal);
+      if (state.history.length > 30) state.history.shift();
+
+      logSystemEvent(`Added ${fmtMoney(amount)} simulated cash to buying power.`);
+      renderAll();
+    }
+
+    document.getElementById("addFundsBtn").addEventListener("click", () => addSimulatedCash(1000));
+
+    function logSystemEvent(msg) {
+      state.tradeLog.unshift({
+        type: "CASH",
+        ticker: "SIM",
+        shares: 0,
+        price: 0,
+        total: 0,
+        time: fmtSimClock(state.simMinutesElapsed),
+        reason: msg
+      });
+      if (state.tradeLog.length > 25) state.tradeLog.pop();
+    }
+
+    // --- Minute-by-Minute Market & AI Execution Engine ---
+    function runMinuteTick() {
+      state.simMinutesElapsed += 1;
+      const clockStr = fmtSimClock(state.simMinutesElapsed);
+
+      // 1. Update stock prices with realistic intraday volatility
+      stocks.forEach(s => {
+        s.prevPrice = s.price;
+        const pctMove = (Math.random() - 0.485) * 0.024; // slight upward drift
+        s.price = Math.max(5, +(s.price * (1 + pctMove)).toFixed(2));
+      });
+
+      // 2. If Auto-Trading is enabled, AI decides whether to BUY or SELL on this minute
+      if (state.autoTrading) {
+        executeAiDecision(clockStr);
+      }
+
+      // 3. Record total value for sparkline
+      const totalVal = getPortfolioValue();
+      state.history.push(totalVal);
+      if (state.history.length > 28) state.history.shift();
+
+      renderAll();
+    }
+
+    function executeAiDecision(clockStr) {
+      // Pick a random stock to evaluate
+      const stock = stocks[Math.floor(Math.random() * stocks.length)];
+      const movePct = ((stock.price - stock.prevPrice) / stock.prevPrice) * 100;
+
+      // Risk sizing multiplier
+      const riskMult = state.risk === "Aggressive" ? 0.28 : state.risk === "Moderate" ? 0.18 : 0.10;
+
+      // Decide action: buy dips/momentum or sell gains/trim
+      const canSell = stock.shares * stock.price > 120;
+      const canBuy = state.cash > 150;
+
+      let action = null;
+      if (canSell && (movePct > 0.35 || (!canBuy && Math.random() > 0.35))) {
+        action = "SELL";
+      } else if (canBuy && (movePct < 0.45 || Math.random() > 0.3)) {
+        action = "BUY";
+      } else if (canSell) {
+        action = "SELL";
+      }
+
+      if (!action) return;
+
+      if (action === "BUY") {
+        const spend = Math.min(state.cash * 0.85, Math.max(120, state.cash * riskMult * (0.8 + Math.random() * 0.6)));
+        const sharesBought = +(spend / stock.price).toFixed(3);
+        const actualCost = +(sharesBought * stock.price).toFixed(2);
+        if (actualCost <= state.cash && sharesBought > 0) {
+          state.cash = +(state.cash - actualCost).toFixed(2);
+          stock.shares = +(stock.shares + sharesBought).toFixed(3);
+          state.tradesCount++;
+          const reason = tradeReasons.BUY[Math.floor(Math.random() * tradeReasons.BUY.length)];
+          state.tradeLog.unshift({
+            type: "BUY",
+            ticker: stock.ticker,
+            shares: sharesBought,
+            price: stock.price,
+            total: actualCost,
+            time: clockStr,
+            reason
+          });
+        }
+      } else if (action === "SELL") {
+        const fractionToSell = Math.min(0.65, riskMult * (1.1 + Math.random()));
+        const sharesSold = +(stock.shares * fractionToSell).toFixed(3);
+        const proceeds = +(sharesSold * stock.price).toFixed(2);
+        if (sharesSold > 0.01) {
+          stock.shares = +(stock.shares - sharesSold).toFixed(3);
+          state.cash = +(state.cash + proceeds).toFixed(2);
+          state.tradesCount++;
+          const reason = tradeReasons.SELL[Math.floor(Math.random() * tradeReasons.SELL.length)];
+          state.tradeLog.unshift({
+            type: "SELL",
+            ticker: stock.ticker,
+            shares: sharesSold,
+            price: stock.price,
+            total: proceeds,
+            time: clockStr,
+            reason
+          });
+        }
+      }
+
+      if (state.tradeLog.length > 25) state.tradeLog.pop();
+    }
+
+    // --- Render Functions ---
+    function renderSparkline() {
+      const pts = state.history;
+      if (pts.length < 2) return;
+      const min = Math.min(...pts) * 0.998;
+      const max = Math.max(...pts) * 1.002;
+      const range = max - min || 1;
+      const w = 320;
+      const h = 88;
+
+      const coords = pts.map((v, i) => {
+        const x = (i / (pts.length - 1)) * w;
+        const y = h - ((v - min) / range) * (h - 10) - 4;
+        return [x.toFixed(1), y.toFixed(1)];
+      });
+
+      const lineD = coords.map((p, idx) => `${idx === 0 ? "M" : "L"}${p[0]},${p[1]}`).join(" ");
+      const areaD = `${lineD} L${w},95 L0,95 Z`;
+
+      document.getElementById("chartLine").setAttribute("d", lineD);
+      document.getElementById("chartArea").setAttribute("d", areaD);
+    }
+
+    function renderAll() {
+      const totalVal = getPortfolioValue();
+      const profit = totalVal - state.netDeposits;
+      const returnPct = (profit / state.netDeposits) * 100;
+      const isUp = profit >= 0;
+      const arrow = isUp ? "▲" : "▼";
+      const sign = isUp ? "+" : "";
+
+      // Dashboard updates
+      document.getElementById("dashTotalBalance").textContent = fmtMoney(totalVal);
+      const dashRetEl = document.getElementById("dashTotalReturn");
+      dashRetEl.textContent = `${arrow} ${sign}${fmtMoney(profit)} (${sign}${returnPct.toFixed(2)}%)`;
+      dashRetEl.className = `delta-text ${isUp ? "up" : "down"}`;
+
+      const metricRetEl = document.getElementById("metricReturn");
+      metricRetEl.textContent = `${sign}${returnPct.toFixed(2)}%`;
+      metricRetEl.className = `val ${isUp ? "up" : "down"}`;
+
+      document.getElementById("metricCash").textContent = fmtMoney(state.cash);
+      document.getElementById("simClockDisplay").textContent = `Sim Time: ${fmtSimClock(state.simMinutesElapsed)}`;
+      document.getElementById("profileSimBalance").textContent = fmtMoney(totalVal);
+
+      // Holdings updates
+      document.getElementById("holdingsTotalVal").textContent = fmtMoney(totalVal);
+      const holdDelta = document.getElementById("holdingsDelta");
+      holdDelta.textContent = `${arrow} ${sign}${returnPct.toFixed(2)}%`;
+      holdDelta.className = `delta-text ${isUp ? "up" : "down"}`;
+
+      const holdingsList = document.getElementById("holdingsList");
+      holdingsList.innerHTML = stocks
+        .filter(s => s.shares > 0.001)
+        .map(s => {
+          const val = s.shares * s.price;
+          const weight = ((val / totalVal) * 100).toFixed(1);
+          const chg = ((s.price - s.prevPrice) / s.prevPrice) * 100;
+          const chgUp = chg >= 0;
+          return `
+            <div class="card">
+              <div class="card-row">
+                <div class="row-left">
+                  <div class="icon-box ${chgUp ? "green" : ""}">${s.icon}</div>
+                  <div>
+                    <div class="val-md">${s.ticker} <span style="font-size:11px; color:var(--text-muted); font-weight:400;">(${s.shares.toFixed(2)} sh)</span></div>
+                    <div class="label-xs">${weight}% of portfolio • ${fmtMoney(s.price)}/sh</div>
+                  </div>
+                </div>
+                <div style="text-align:right;">
+                  <div class="val-md">${fmtMoney(val)}</div>
+                  <div class="label-xs ${chgUp ? "up" : "down"}">${chgUp ? "+" : ""}${chg.toFixed(2)}% ${chgUp ? "▲" : "▼"}</div>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join("");
+
+      // Cash row in Holdings
+      const cashWeight = ((state.cash / totalVal) * 100).toFixed(1);
+      holdingsList.innerHTML += `
+        <div class="card">
+          <div class="card-row">
+            <div class="row-left">
+              <div class="icon-box">💰</div>
+              <div>
+                <div class="val-md">Cash</div>
+                <div class="label-xs">${cashWeight}% of portfolio</div>
+              </div>
+            </div>
+            <div style="text-align:right;">
+              <div class="val-md">${fmtMoney(state.cash)}</div>
+              <div class="label-xs">Buying Power</div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      // Research updates
+      renderResearch();
+
+      // Strategy & Trade Feed updates
+      document.getElementById("tradeCountBadge").textContent = `${state.tradesCount} trades executed`;
+      const feedEl = document.getElementById("tradeFeed");
+      if (state.tradeLog.length === 0) {
+        feedEl.innerHTML = `<div class="label-xs" style="text-align:center; padding:16px;">Waiting for first minute tick...</div>`;
+      } else {
+        feedEl.innerHTML = state.tradeLog.map(t => {
+          if (t.type === "CASH") {
+            return `
+              <div class="trade-item">
+                <div><span class="tag-buy">DEPOSIT</span> <span>${t.reason}</span></div>
+                <span class="label-xs">${t.time}</span>
+              </div>
+            `;
+          }
+          const isBuy = t.type === "BUY";
+          return `
+            <div class="trade-item">
+              <div style="max-width: 74%;">
+                <div>
+                  <span class="${isBuy ? "tag-buy" : "tag-sell"}">${t.type}</span>
+                  <strong>${t.shares.toFixed(2)} ${t.ticker}</strong> @ ${fmtMoney(t.price)}
+                </div>
+                <div class="label-xs" style="margin-top:3px;">${t.reason}</div>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-weight:700;">${fmtMoney(t.total)}</div>
+                <div class="label-xs">${t.time}</div>
+              </div>
+            </div>
+          `;
+        }).join("");
+
+        const latest = state.tradeLog[0];
+        document.getElementById("latestTradeBanner").textContent =
+          latest.type === "CASH"
+            ? latest.reason
+            : `${latest.type} ${latest.shares.toFixed(2)} ${latest.ticker} (${fmtMoney(latest.total)}) at ${latest.time}`;
+      }
+
+      // Projection updates
+      updateProjectionDisplay();
+      renderSparkline();
+    }
+
+    let currentResearchFilter = "all";
+    function filterResearch(mode, btn) {
+      currentResearchFilter = mode;
+      document.querySelectorAll(".pill-tab").forEach(b => b.classList.remove("active"));
+      if (btn) btn.classList.add("active");
+      renderResearch();
+    }
+
+    function renderResearch() {
+      let list = [...stocks];
+      if (currentResearchFilter === "gainers") {
+        list.sort((a, b) => ((b.price - b.prevPrice) / b.prevPrice) - ((a.price - a.prevPrice) / a.prevPrice));
+      }
+      document.getElementById("researchList").innerHTML = list.map(s => {
+        const chg = ((s.price - s.prevPrice) / s.prevPrice) * 100;
+        const chgUp = chg >= 0;
+        return `
+          <div class="card">
+            <div class="card-row" style="margin-bottom: 8px;">
+              <div class="row-left">
+                <div class="icon-box ${chgUp ? "green" : ""}">${s.icon}</div>
+                <div>
+                  <div class="val-md">${s.ticker} <span style="font-size:12px; color:var(--text-muted); font-weight:500;">${fmtMoney(s.price)}</span></div>
+                  <div class="label-xs">${s.name}</div>
+                </div>
+              </div>
+              <div class="delta-text ${chgUp ? "up" : "down"}">${chgUp ? "+" : ""}${chg.toFixed(2)}% ${chgUp ? "▲" : "▼"}</div>
+            </div>
+            <p style="font-size: 12px; color: var(--text-muted); line-height: 1.4;">${s.note}</p>
+          </div>
+        `;
+      }).join("");
+    }
+
+    // --- Wealth Projection Calculator ---
+    function setProjectionYears(yrs, btn) {
+      state.timelineYears = yrs;
+      document.querySelectorAll(".tf-btn").forEach(b => b.classList.remove("active"));
+      if (btn) btn.classList.add("active");
+      updateProjectionDisplay();
+    }
+
+    function updateProjectionDisplay() {
+      const start = getPortfolioValue();
+      const monthly = 500;
+      const years = state.timelineYears;
+      const annualRate = state.risk === "Aggressive" ? 0.095 : state.risk === "Moderate" ? 0.075 : 0.055;
+      const r = annualRate / 12;
+      const n = years * 12;
+      const futureVal = start * Math.pow(1 + r, n) + monthly * ((Math.pow(1 + r, n) - 1) / r);
+
+      document.getElementById("projStartAmt").textContent = fmtMoney(start);
+      document.getElementById("projValue").textContent = fmtMoney(Math.round(futureVal));
+      document.getElementById("projEndAmt").textContent = fmtMoney(Math.round(futureVal));
+      document.getElementById("projYearsLabel").textContent = `in ${years} year${years > 1 ? "s" : ""}`;
+    }
+
+    // --- Event Listeners for Controls ---
+    document.getElementById("autoTradeToggle").addEventListener("change", (e) => {
+      state.autoTrading = e.target.checked;
+      const pill = document.getElementById("aiStatusPill");
+      const dot = document.getElementById("simDot");
+      if (state.autoTrading) {
+        pill.textContent = "● AI Auto-Trading";
+        pill.classList.remove("paused");
+        dot.style.background = "var(--green)";
+        document.getElementById("autoTradeSub").textContent = "Executing buys & sells every sim minute";
+      } else {
+        pill.textContent = "❚❚ AI Paused";
+        pill.classList.add("paused");
+        dot.style.background = "var(--red)";
+        document.getElementById("autoTradeSub").textContent = "Automatic trades paused";
+      }
+    });
+
+    document.getElementById("saveProfileBtn").addEventListener("click", () => {
+      state.goal = document.getElementById("goalSelect").value;
+      state.risk = document.getElementById("riskSelect").value;
+      state.timelineYears = parseInt(document.getElementById("timelineSelect").value, 10);
+      document.getElementById("strategyRationale").textContent =
+        `A ${state.goal.toLowerCase()} algorithm fits your profile (${state.risk} risk, ${state.timelineYears}-year timeline).`;
+      switchScreen("dashboard");
+      renderAll();
+    });
+
+    document.getElementById("forceTickBtn").addEventListener("click", runMinuteTick);
+
+    // Simulation Speed Toggle
+    let loopTimer = setInterval(runMinuteTick, state.tickIntervalMs);
+    const speeds = [
+      { label: "1m/3s", ms: 3000 },
+      { label: "1m/1s", ms: 1000 },
+      { label: "1m/0.5s", ms: 500 }
+    ];
+    let speedIdx = 0;
+    document.getElementById("speedBtn").addEventListener("click", () => {
+      speedIdx = (speedIdx + 1) % speeds.length;
+      state.tickIntervalMs = speeds[speedIdx].ms;
+      document.getElementById("speedBtn").textContent = `Speed: ${speeds[speedIdx].label}`;
+      clearInterval(loopTimer);
+      loopTimer = setInterval(runMinuteTick, state.tickIntervalMs);
+    });
+
+    // Initial boot & first trade
+    runMinuteTick();
+  </script>
+</body>
+</html>
